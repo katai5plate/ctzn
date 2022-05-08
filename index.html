@@ -263,7 +263,7 @@
           "#geo"
         ).innerText = `GEO: ${state.geo.lat()}, ${state.geo.lng()}`;
         state.map.setCenter(state.geo);
-        state.map.setZoom(15);
+        isManual || state.map.setZoom(15);
         state.api.nearbySearch(
           {
             location: state.geo,
