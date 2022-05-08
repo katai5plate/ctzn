@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/open-fonts@1.1.1/fonts/inter.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css"
+    />
+    <style>
+      @import url("https://fonts.xz.style/serve/fira-code.css");
+
+      :root {
+        --nc-font-sans: "Fira Code", monospace;
+        --nc-font-mono: "Fira Code", monospace;
+        --nc-tx-1: #ffffff;
+        --nc-tx-2: #eeeeee;
+        --nc-bg-1: #000000;
+        --nc-bg-2: #001213;
+        --nc-bg-3: #00436d;
+        --nc-lk-1: #00c3ff;
+        --nc-lk-2: #004ec2;
+        --nc-lk-tx: #000000;
+        --nc-ac-1: #0095ff;
+        --nc-ac-tx: #000000;
+      }
+
+      #map {
+        width: 100%;
+        height: 500px;
+      }
+    </style>
+    <title>CTZN</title>
+  </head>
+
+  <body>
+    <p>
+      <label> API_KEY <input id="key" type="password" /> </label>
+    </p>
+    <hr />
+    <button id="run" class="ld" onClick="updateGeo()">FETCH API</button>
+    <hr />
+    <p id="geo">GEO: --</p>
+    <div><div id="map" /></div>
+    <hr />
+    <div id="list" />
+    <script async defer src="./mapStyles.js"></script>
+    <script>
+      let state = {
+        key: "",
+        radius: 100,
+        geo: null,
+        isLoading: false,
+        map: null,
+        api: null,
+        circle: null,
+        list: [],
+      };
+      const setState = (value) => {
+        state = {
+          ...state,
+          ...value,
+        };
+        [...document.querySelectorAll(".ld")].forEach((x) => {
+          x.disabled = state.isLoading;
+        });
+      };
+
+      window.initMap = () => {
+        setState({
+          map: new google.maps.Map(document.getElementById("map"), {
+            center: new google.maps.LatLng(
+              35.65810638414144,
+              139.74137141113252
+            ),
+            zoom: 10,
+            styles: window.mapStyles,
+          }),
+        });
+        setState({
+          api: new google.maps.places.PlacesService(state.map),
+        });
+      };
+
+      const sleep = (sec) => new Promise((r) => setTimeout(r, sec * 1000));
+      const getGeo = () =>
+        new Promise((res, rej) => {
+          navigator.geolocation.getCurrentPosition((x) => {
+            const { latitude, longitude } = x.coords;
+            res(new google.maps.LatLng(latitude, longitude));
+          }, rej);
+        });
+
+      const renderList = () => {
+        document.querySelector("#list").innerHTML = `${state.list
+          .map(
+            ({ name, place_id, rating, user_ratings_total }) => `
+        <div data-place="${place_id}">
+          <h4>${name}</h4>
+          <p>${rating ? "★".repeat(rating) : "--"} / ${
+              user_ratings_total ?? "--"
+            }</p>
+          <div class="details">
+            <button onClick="fetchDetails('${place_id}')">FETCH</button>
+          </div>
+          <hr />
+        </div>
+      `
+          )
+          .join("\n")}`;
+      };
+
+      const renderDetails = (placeId, { opening_hours, reviews, website }) => {
+        const { open_now, weekday_text } = opening_hours ?? {};
+        const el = document.querySelector(`[data-place="${placeId}"] .details`);
+        console.log(el, `[data-place="${placeId}"] .details`);
+        el.innerHTML = `
+          ${website ? `<a href="${website}">WEBSITE</a>` : ""}
+          <ul>
+            <li>NOW: ${open_now ? "OPEN" : "CLOSE"}</li>
+            ${weekday_text.map((x) => `<li>${x}</li>`).join("\n")}
+          </ul>
+          ${reviews
+            .filter((x) => x.text)
+            .map(
+              ({ author_name, rating, time, text, url }) => `
+            <h5><a href="${url}">${author_name}</a></h5>
+            <ul>
+              <li>${rating ? "★".repeat(rating) : "--"}</li>
+              <li>${time ? new Date(time).toLocaleString() : "--"}</li>
+            </ul>
+            <pre style="white-space: pre-wrap;">${text}</pre>
+          `
+            )
+            .join("\n")}
+        `;
+      };
+
+      const updateGeo = async () => {
+        setState({ isLoading: true });
+        if (!window.google) {
+          if (document.querySelector("#googleapis")) {
+            alert("INVALID API_KEY");
+            location.reload();
+            return;
+          }
+          setState({
+            key: document.querySelector("#key").value,
+          });
+          if (!state.key) {
+            alert("INPUT API_KEY");
+            setState({ isLoading: false });
+            return;
+          }
+          const script = document.createElement("script");
+          script.src = `https://maps.googleapis.com/maps/api/js?libraries=places&callback=initMap&key=${state.key}`;
+          script.id = "googleapis";
+          document.body.appendChild(script);
+          await sleep(2);
+          document.querySelector("#run").innerText = "GET GEO-LOCATION";
+          setState({ isLoading: false });
+          return;
+        }
+        setState({
+          geo: await getGeo(),
+        });
+        setState({
+          circle: new google.maps.Circle({
+            strokeColor: "#00ddff",
+            fillColor: "#0000aa",
+            map: state.map,
+            center: state.geo,
+            radius: state.radius,
+          }),
+        });
+        document.querySelector(
+          "#geo"
+        ).innerText = `GEO: ${state.geo.lat()}, ${state.geo.lng()}`;
+        state.map.setCenter(state.geo);
+        state.map.setZoom(18.25);
+        state.api.nearbySearch(
+          {
+            location: state.geo,
+            radius: state.radius,
+            language: "ja",
+          },
+          (data) => {
+            document.querySelector("#run").innerText = "UPDATE GEO-LOCATION";
+            setState({
+              isLoading: false,
+              list: data
+                .filter((x) => x.business_status === "OPERATIONAL")
+                .map(({ name, place_id, rating, user_ratings_total }) => ({
+                  name,
+                  place_id,
+                  rating,
+                  user_ratings_total,
+                })),
+            });
+            renderList();
+          }
+        );
+      };
+      const fetchDetails = (placeId) => {
+        setState({ isLoading: true });
+        state.api.getDetails({ language: "ja", placeId }, (data) => {
+          console.log(placeId, data);
+          renderDetails(placeId, data);
+          setState({ isLoading: false });
+        });
+      };
+    </script>
+  </body>
+</html>
