@@ -43,8 +43,25 @@
       <label> API_KEY <input id="key" type="password" /> </label>
     </p>
     <hr />
-    <button id="run" class="ld" onClick="updateGeo()">FETCH API</button>
-    <label> MANUAL <input id="manual" type="checkbox" /> </label>
+    <div style="display: flex">
+      <input
+        id="radius"
+        type="range"
+        name="speed"
+        min="0"
+        max="1000"
+        value="250"
+        step="50"
+        onChange="updateRadius()"
+        style="margin-right: 8px"
+      />
+      <label style="margin-right: 4px">RANGE:</label>
+      <div id="radius-preview" style="margin-right: 8px"></div>
+    </div>
+    <p>
+      <button id="run" class="ld" onClick="updateGeo()">FETCH API</button>
+      <label>MANUAL <input id="manual" type="checkbox" /></label>
+    </p>
     <hr />
     <p id="geo">GEO: --</p>
     <div><div id="map" /></div>
@@ -101,6 +118,12 @@
           res(state.map.getCenter());
         });
 
+      const updateRadius = () => {
+        const radius = Number(document.querySelector("#radius").value);
+        document.querySelector("#radius-preview").innerText = radius;
+        setState({ radius });
+      };
+      updateRadius();
       const renderList = () => {
         document.querySelector("#list").innerHTML = `${state.list
           .map(
@@ -214,10 +237,14 @@
           {
             location: state.geo,
             radius: state.radius,
+            rankby: "distance",
+            minprice: 0,
+            maxprice: 4,
             language: "ja",
           },
           (data) => {
             document.querySelector("#run").innerText = "UPDATE GEO-LOCATION";
+            console.log(data);
             setState({
               isLoading: false,
               list: data.filter((x) => x.business_status === "OPERATIONAL"),
