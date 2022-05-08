@@ -115,21 +115,36 @@
           .join("\n")}`;
       };
 
-      const renderDetails = (placeId, { opening_hours, reviews, website }) => {
+      const renderDetails = async (
+        placeId,
+        { name, opening_hours, reviews, website, photos }
+      ) => {
         const { open_now, weekday_text } = opening_hours ?? {};
         const el = document.querySelector(`[data-place="${placeId}"] .details`);
         console.log(el, `[data-place="${placeId}"] .details`);
+        const thumb = photos?.[0];
         el.innerHTML = `
-          ${website ? `<a href="${website}">WEBSITE</a>` : ""}
+          ${
+            thumb
+              ? `<img src="${await thumb.getUrl()}" style="height: 400px" /><br />`
+              : ""
+          }
+          ${
+            website
+              ? `<a target="_blank" href="${website}">WEBSITE</a>`
+              : `<a target="_blank" href="https://www.google.com/search?q=${encodeURIComponent(
+                  name
+                )}">GOOGLE THIS</a>`
+          }
           <ul>
             <li>NOW: ${open_now ? "OPEN" : "CLOSE or UNKNOWN"}</li>
-            ${(weekday_text || []).map((x) => `<li>${x}</li>`).join("\n")}
+            ${(weekday_text ?? []).map((x) => `<li>${x}</li>`).join("\n")}
           </ul>
-          ${reviews
+          ${(reviews ?? [])
             .filter((x) => x.text)
             .map(
               ({ author_name, rating, time, text, url }) => `
-            <h5><a href="${url}">${author_name}</a></h5>
+            <h5><a target="_blank" href="${url}">${author_name}</a></h5>
             <ul>
               <li>${rating ? "★".repeat(rating) : "--"}</li>
               <li>${time ? new Date(time).toLocaleString() : "--"}</li>
@@ -208,9 +223,9 @@
       };
       const fetchDetails = (placeId) => {
         setState({ isLoading: true });
-        state.api.getDetails({ language: "ja", placeId }, (data) => {
+        state.api.getDetails({ language: "ja", placeId }, async (data) => {
           console.log(placeId, data);
-          renderDetails(placeId, data);
+          await renderDetails(placeId, data);
           setState({ isLoading: false });
         });
       };
