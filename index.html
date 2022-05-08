@@ -44,6 +44,7 @@
     </p>
     <hr />
     <button id="run" class="ld" onClick="updateGeo()">FETCH API</button>
+    <label> MANUAL <input id="manual" type="checkbox" /> </label>
     <hr />
     <p id="geo">GEO: --</p>
     <div><div id="map" /></div>
@@ -95,6 +96,10 @@
             res(new google.maps.LatLng(latitude, longitude));
           }, rej);
         });
+      const getGeoFromMap = () =>
+        new Promise((res, rej) => {
+          res(state.map.getCenter());
+        });
 
       const renderList = () => {
         document.querySelector("#list").innerHTML = `${state.list
@@ -102,9 +107,9 @@
             ({ name, place_id, rating, user_ratings_total }) => `
         <div data-place="${place_id}">
           <h4>${name}</h4>
-          <p>${rating ? "★".repeat(rating) : "--"} / ${
-              user_ratings_total ?? "--"
-            }</p>
+          <p>${
+            rating ? "★".repeat(rating).padEnd(5, "\uff3f") : "\uff3f".repeat(5)
+          } / ${user_ratings_total ?? "--"}</p>
           <div class="details">
             <button onClick="fetchDetails('${place_id}')">FETCH</button>
           </div>
@@ -126,7 +131,7 @@
         el.innerHTML = `
           ${
             thumb
-              ? `<img src="${await thumb.getUrl()}" style="height: 400px" /><br />`
+              ? `<img src="${await thumb.getUrl()}" style="width: auto; height: 400px" /><br />`
               : ""
           }
           ${
@@ -143,13 +148,14 @@
           ${(reviews ?? [])
             .filter((x) => x.text)
             .map(
-              ({ author_name, rating, time, text, url }) => `
-            <h5><a target="_blank" href="${url}">${author_name}</a></h5>
-            <ul>
-              <li>${rating ? "★".repeat(rating) : "--"}</li>
-              <li>${time ? new Date(time).toLocaleString() : "--"}</li>
-            </ul>
+              ({ author_name, rating, time, text, author_url }) => `
+            <h5><a target="_blank" href="${author_url}">${author_name}</a></h5>
             <pre style="white-space: pre-wrap;">${text}</pre>
+            <p>${
+              rating
+                ? "★".repeat(rating).padEnd(5, "\uff3f")
+                : "\uff3f".repeat(5)
+            } ${time ? new Date(time * 1000).toLocaleString() : "--"}</p>
           `
             )
             .join("\n")}
@@ -181,23 +187,29 @@
           setState({ isLoading: false });
           return;
         }
+        const isManual = document.querySelector("#manual").checked;
         setState({
-          geo: await getGeo(),
+          geo: !isManual ? await getGeo() : await getGeoFromMap(),
         });
-        setState({
-          circle: new google.maps.Circle({
-            strokeColor: "#00ddff",
-            fillColor: "#0000aa",
-            map: state.map,
-            center: state.geo,
-            radius: state.radius,
-          }),
-        });
+        if (!state.circle) {
+          setState({
+            circle: new google.maps.Circle({
+              strokeColor: "#00ddff",
+              fillColor: "#0000aa",
+              map: state.map,
+              center: state.geo,
+              radius: state.radius,
+            }),
+          });
+        } else {
+          state.circle.setCenter(state.geo);
+          state.circle.setRadius(state.radius);
+        }
         document.querySelector(
           "#geo"
         ).innerText = `GEO: ${state.geo.lat()}, ${state.geo.lng()}`;
         state.map.setCenter(state.geo);
-        state.map.setZoom(18.25);
+        state.map.setZoom(15);
         state.api.nearbySearch(
           {
             location: state.geo,
@@ -208,14 +220,13 @@
             document.querySelector("#run").innerText = "UPDATE GEO-LOCATION";
             setState({
               isLoading: false,
-              list: data
-                .filter((x) => x.business_status === "OPERATIONAL")
-                .map(({ name, place_id, rating, user_ratings_total }) => ({
-                  name,
-                  place_id,
-                  rating,
-                  user_ratings_total,
-                })),
+              list: data.filter((x) => x.business_status === "OPERATIONAL"),
+              // .map(({ name, place_id, rating, user_ratings_total }) => ({
+              //   name,
+              //   place_id,
+              //   rating,
+              //   user_ratings_total,
+              // })),
             });
             renderList();
           }
