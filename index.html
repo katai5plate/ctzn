@@ -51,7 +51,7 @@
         id="radius"
         type="range"
         name="speed"
-        min="0"
+        min="50"
         max="1000"
         value="250"
         step="50"
@@ -121,6 +121,19 @@
         new Promise((res, rej) => {
           res(state.map.getCenter());
         });
+      const getFitBounds = () => {
+        const lats = state.list.map((x) => x.geometry.location.lat());
+        const lngs = state.list.map((x) => x.geometry.location.lng());
+        const minLat = Math.min(...lats);
+        const minLng = Math.min(...lngs);
+        const maxLat = Math.max(...lats);
+        const maxLng = Math.max(...lngs);
+        console.log("bounds", [minLat, minLng], [maxLat, maxLng]);
+        return new google.maps.LatLngBounds(
+          new google.maps.LatLng(minLat, minLng),
+          new google.maps.LatLng(maxLat, maxLng)
+        );
+      };
 
       const updateRadius = () => {
         const radius = Number(document.querySelector("#radius").value);
@@ -229,6 +242,7 @@
         }
         const isManual = document.querySelector("#manual").checked;
         setState({
+          execNextPage: null,
           geo: !isManual ? await getGeo() : await getGeoFromMap(),
         });
         if (!state.circle) {
@@ -274,6 +288,7 @@
                   }
                 : null,
             });
+            isManual || state.map.fitBounds(getFitBounds());
             renderList();
           }
         );
