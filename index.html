@@ -34,6 +34,9 @@
         width: 100%;
         height: 500px;
       }
+      .gray {
+        color: gray;
+      }
     </style>
     <title>CTZN</title>
   </head>
@@ -135,11 +138,11 @@
           <p>${
             price_level
               ? "\uff04".repeat(price_level).padEnd(4, "\uff3f")
-              : "\uff3f".repeat(4)
+              : `<span class="gray">${"\uff3f".repeat(4)}</span>`
           } / ${
               rating
                 ? "★".repeat(rating).padEnd(5, "\uff3f")
-                : "\uff3f".repeat(5)
+                : `<span class="gray">${"\uff3f".repeat(5)}</span>`
             } / ${user_ratings_total ?? "--"}</p>
           <div class="details">
             <button onClick="fetchDetails('${place_id}')">FETCH</button>
@@ -191,7 +194,7 @@
             <p>${
               rating
                 ? "★".repeat(rating).padEnd(5, "\uff3f")
-                : "\uff3f".repeat(5)
+                : `<span class="gray">${"\uff3f".repeat(5)}</span>`
             } ${time ? new Date(time * 1000).toLocaleString() : "--"}</p>
           `
             )
@@ -261,8 +264,15 @@
             console.log(data, code, token);
             setState({
               isLoading: false,
-              list: data.filter((x) => x.business_status === "OPERATIONAL"),
-              execNextPage: token.hasNextPage ? () => token.nextPage() : null,
+              list: [
+                ...(state.execNextPage ? state.list : []),
+                ...data.filter((x) => x.business_status === "OPERATIONAL"),
+              ],
+              execNextPage: token.hasNextPage
+                ? () => {
+                    token.nextPage();
+                  }
+                : null,
             });
             renderList();
           }
