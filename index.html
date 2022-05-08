@@ -78,6 +78,7 @@
         api: null,
         circle: null,
         list: [],
+        execNextPage: null,
       };
       const setState = (value) => {
         state = {
@@ -125,7 +126,8 @@
       };
       updateRadius();
       const renderList = () => {
-        document.querySelector("#list").innerHTML = `${state.list
+        document.querySelector("#list").innerHTML = `
+        ${state.list
           .map(
             ({ name, place_id, rating, user_ratings_total }) => `
         <div data-place="${place_id}">
@@ -140,7 +142,13 @@
         </div>
       `
           )
-          .join("\n")}`;
+          .join("\n")}
+          ${
+            state.execNextPage
+              ? '<button onClick="state.execNextPage()">DIVE DEEP</button>'
+              : ""
+          }
+        `;
       };
 
       const renderDetails = async (
@@ -242,18 +250,13 @@
             maxprice: 4,
             language: "ja",
           },
-          (data) => {
+          (data, code, token) => {
             document.querySelector("#run").innerText = "UPDATE GEO-LOCATION";
-            console.log(data);
+            console.log(data, code, token);
             setState({
               isLoading: false,
               list: data.filter((x) => x.business_status === "OPERATIONAL"),
-              // .map(({ name, place_id, rating, user_ratings_total }) => ({
-              //   name,
-              //   place_id,
-              //   rating,
-              //   user_ratings_total,
-              // })),
+              execNextPage: token.hasNextPage ? () => token.nextPage() : null,
             });
             renderList();
           }
