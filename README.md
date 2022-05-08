@@ -2,6 +2,8 @@
 
 口コミ収集ツール
 
+https://katai5plate.github.io/ctzn/
+
 ## つかいかた
 
 1. API_KEY に Maps JavaScript API のトークンを入力
