@@ -122,8 +122,8 @@
         el.innerHTML = `
           ${website ? `<a href="${website}">WEBSITE</a>` : ""}
           <ul>
-            <li>NOW: ${open_now ? "OPEN" : "CLOSE"}</li>
-            ${weekday_text.map((x) => `<li>${x}</li>`).join("\n")}
+            <li>NOW: ${open_now ? "OPEN" : "CLOSE or UNKNOWN"}</li>
+            ${(weekday_text || []).map((x) => `<li>${x}</li>`).join("\n")}
           </ul>
           ${reviews
             .filter((x) => x.text)
