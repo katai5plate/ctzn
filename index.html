@@ -129,12 +129,18 @@
         document.querySelector("#list").innerHTML = `
         ${state.list
           .map(
-            ({ name, place_id, rating, user_ratings_total }) => `
+            ({ name, place_id, rating, user_ratings_total, price_level }) => `
         <div data-place="${place_id}">
           <h4>${name}</h4>
           <p>${
-            rating ? "★".repeat(rating).padEnd(5, "\uff3f") : "\uff3f".repeat(5)
-          } / ${user_ratings_total ?? "--"}</p>
+            price_level
+              ? "\uff04".repeat(price_level).padEnd(4, "\uff3f")
+              : "\uff3f".repeat(4)
+          } / ${
+              rating
+                ? "★".repeat(rating).padEnd(5, "\uff3f")
+                : "\uff3f".repeat(5)
+            } / ${user_ratings_total ?? "--"}</p>
           <div class="details">
             <button onClick="fetchDetails('${place_id}')">FETCH</button>
           </div>
