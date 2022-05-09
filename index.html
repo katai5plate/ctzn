@@ -70,7 +70,7 @@
     <p>
       <label
         ><input id="find" /><button id="search" class="ld" onClick="search()">
-          SEARCH
+          SEARCH & UPDATE
         </button></label
       >
     </p>
@@ -122,6 +122,9 @@
         state.map.addListener("dblclick", ({ latLng }) => {
           state.map.setCenter(latLng);
         });
+        state.map.addListener("drag", () => {
+          document.querySelector("#manual").checked = true;
+        });
       };
 
       const sleep = (sec) => new Promise((r) => setTimeout(r, sec * 1000));
@@ -162,7 +165,11 @@
           .map(
             ({ name, place_id, rating, user_ratings_total, price_level }) => `
         <div data-place="${place_id}">
-          <h4>${name}</h4>
+          <h4 style="color: ${
+            state.markers.find((x) => x?.placeId === place_id)
+              ? "yellow"
+              : "white"
+          };">${name}</h4>
           <p>${
             price_level
               ? "\uff04".repeat(price_level).padEnd(4, "\uff3f")
@@ -329,6 +336,7 @@
         setState({ markers: [] });
         const query = document.querySelector("#find").value;
         if (!query) return;
+        setState({ isLoading: true });
         state.api.textSearch(
           {
             query,
@@ -338,9 +346,11 @@
           (data) => {
             console.log(data);
             setState({
-              markers: data.map(
-                ({ geometry: { location: position } }) =>
-                  new google.maps.Marker({
+              isLoading: false,
+              markers: data
+                .filter((x) => x.business_status === "OPERATIONAL")
+                .map(({ name, place_id, geometry: { location: position } }) => {
+                  const marker = new google.maps.Marker({
                     map: state.map,
                     position,
                     icon: {
@@ -355,9 +365,13 @@
                       strokeOpacity: 0.75,
                       strokeWeight: 2,
                     },
-                  })
-              ),
+                  });
+                  marker.name = name;
+                  marker.placeId = place_id;
+                  return marker;
+                }),
             });
+            updateGeo();
           }
         );
       };
