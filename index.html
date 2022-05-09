@@ -42,10 +42,12 @@
   </head>
 
   <body>
-    <p>
-      <label> API_KEY <input id="key" type="password" /> </label>
-    </p>
-    <hr />
+    <div id="key-form">
+      <p>
+        <label> API_KEY <input id="key" type="password" /> </label>
+      </p>
+      <hr />
+    </div>
     <div style="display: flex">
       <input
         id="radius"
@@ -63,7 +65,14 @@
     </div>
     <p>
       <button id="run" class="ld" onClick="updateGeo()">FETCH API</button>
-      <label>MANUAL <input id="manual" type="checkbox" /></label>
+      <label>MANUAL <input id="manual" class="ld" type="checkbox" /></label>
+    </p>
+    <p>
+      <label
+        ><input id="find" /><button id="search" class="ld" onClick="search()">
+          SEARCH
+        </button></label
+      >
     </p>
     <hr />
     <p id="geo">GEO: --</p>
@@ -73,6 +82,7 @@
     <script async defer src="./mapStyles.js"></script>
     <script>
       let state = {
+        isReady: false,
         key: "",
         radius: 250,
         geo: null,
@@ -82,6 +92,7 @@
         circle: null,
         list: [],
         execNextPage: null,
+        markers: [],
       };
       const setState = (value) => {
         state = {
@@ -224,31 +235,35 @@
 
       const updateGeo = async () => {
         setState({ isLoading: true });
-        if (!window.google) {
-          if (document.querySelector("#googleapis")) {
+        if (!state.isReady) {
+          if (!window.google) {
+            setState({
+              key: document.querySelector("#key").value,
+            });
+            if (!state.key) {
+              alert("INPUT API_KEY");
+              setState({ isLoading: false });
+              return;
+            }
+            document.querySelector("#key-form").remove();
+            const script = document.createElement("script");
+            script.src = `https://maps.googleapis.com/maps/api/js?libraries=places&callback=initMap&key=${state.key}`;
+            script.id = "googleapis";
+            document.body.appendChild(script);
+            await sleep(2);
+            document.querySelector("#run").innerText = "GET GEO-LOCATION";
+            setState({ isLoading: false });
+            return;
+          }
+          if (document.querySelector('img[src$="icon_error.png"]')) {
             alert("INVALID API_KEY");
             location.reload();
             return;
           }
-          setState({
-            key: document.querySelector("#key").value,
-          });
-          if (!state.key) {
-            alert("INPUT API_KEY");
-            setState({ isLoading: false });
-            return;
-          }
-          const script = document.createElement("script");
-          script.src = `https://maps.googleapis.com/maps/api/js?libraries=places&callback=initMap&key=${state.key}`;
-          script.id = "googleapis";
-          document.body.appendChild(script);
-          await sleep(2);
-          document.querySelector("#run").innerText = "GET GEO-LOCATION";
-          setState({ isLoading: false });
-          return;
         }
         const isManual = document.querySelector("#manual").checked;
         setState({
+          isReady: true,
           execNextPage: null,
           geo: !isManual ? await getGeo() : await getGeoFromMap(),
         });
@@ -307,6 +322,44 @@
           await renderDetails(placeId, data);
           setState({ isLoading: false });
         });
+      };
+      const search = () => {
+        if (!state.isReady) return alert("SET LOCATION");
+        (state.markers ?? []).forEach((m) => m.setMap());
+        setState({ markers: [] });
+        const query = document.querySelector("#find").value;
+        if (!query) return;
+        state.api.textSearch(
+          {
+            query,
+            language: "ja",
+            location: state.geo,
+          },
+          (data) => {
+            console.log(data);
+            setState({
+              markers: data.map(
+                ({ geometry: { location: position } }) =>
+                  new google.maps.Marker({
+                    map: state.map,
+                    position,
+                    icon: {
+                      anchor: new google.maps.Point(11, 22),
+                      fillColor: "black",
+                      fillOpacity: 0.25,
+                      labelOrigin: new google.maps.Point(11, 11),
+                      path: google.maps.SymbolPath.CIRCLE,
+                      rotation: 0,
+                      scale: 10,
+                      strokeColor: "#ffff00",
+                      strokeOpacity: 0.75,
+                      strokeWeight: 2,
+                    },
+                  })
+              ),
+            });
+          }
+        );
       };
     </script>
   </body>
